@@ -1,2 +1,0 @@
-# DIscord-Bot
-DC Bots
