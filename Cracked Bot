@@ -1,0 +1,209 @@
+import asyncio
+import random
+import discord
+import discord.webhook
+
+from discord import Member, Guild
+from discord.ext import commands
+
+client = commands.Bot(command_prefix='!')
+
+
+@client.event
+async def on_ready():
+    print("Der Bot ist Online")
+    client.loop.create_task(status_task())
+
+
+async def status_task():
+    colors = [discord.Colour.red(), discord.Colour.orange(), discord.Colour.gold(), discord.Colour.green(),
+              discord.Colour.blue(), discord.Colour.purple()]
+    while True:
+        await client.change_presence(activity=discord.Game('Dieser Bot wurde von FloMod_YT programmiert'),
+                                     status=discord.Status.online)
+        await asyncio.sleep(10)
+        await client.change_presence(activity=discord.Game('Bot Fehler bei FloMod_YT melden'),
+                                     status=discord.Status.online)
+        await asyncio.sleep(10)
+        await client.change_presence(activity=discord.Game('Dieser Bot ist in Entwicklung'),
+                                     status=discord.Status.online)
+        await asyncio.sleep(10)
+        guild: Guild = client.get_guild(680829708195201034)
+        if guild:
+            role = guild.get_role(710539999753273444)
+            if role:
+                if role.position < guild.get_member(client.user.id).top_role.position:
+                    await role.edit(colour=random.choice(colors))
+                    await asyncio.sleep(20)
+
+
+def is_not_pinned(mess):
+    return not mess.pinned
+
+
+@client.command()
+async def helpme(ctx):
+    await ctx.message.delete()
+    embed = discord.Embed(title="**Hilfe für den Bot**", description=f'!helpme - Zeigt diese Hilfe an\r\n'
+                                                                     f'!funny - Zeigt Fun Commands an\r\n'
+                                                                     f'!userinfo - Zeigt Infos über User an\r\n'
+                                                                     f'!clear - Löscht Beliebig viele Nachrichten\r\n'
+                                                                     f'!ban - bannt User\r\n'
+                                                                     f'!unban - entbannt User\r\n'
+                                                                     f'!kick - kickt User\r\n'
+                                                                     f'!status - ändert den Status des Bots\r\n'
+                                                                     f'!serverinfo - zeigt sämtliche Infos über den Server an\r\n'
+                                                                     f'!shutdown - mit diesem Command können Admins den Bot herunterfahren\r\n')
+    await ctx.message.channel.send(embed=embed)
+
+
+@client.command()
+async def funny(ctx):
+    await ctx.message.delete()
+    embed = discord.Embed(title="**FunCommands**", description=f'!kopf - Zum etwas entscheiden\r\n'
+                                                               f'!zahl - Zum etwas entscheiden\r\n')
+    await ctx.message.channel.send(embed=embed)
+
+
+@client.command()
+@commands.has_permissions(ban_members=True)
+async def ban(message, member: Member):
+    await member.ban()
+    await message.channel.send(f'{member.name} wurde gebannt.')
+
+
+@ban.error
+async def ban_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Bitte Gib einen Spieler ein")
+
+
+@client.command()
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, userid):
+    await ctx.guild.unban(client.get_user(int(userid)))
+    await ctx.send(f"{user.name} wurde entbannt")
+
+
+@unban.error
+async def unban_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Bitte Gib einen Spieler ein")
+
+
+@client.command()
+@commands.has_permissions(kick_members=True)
+async def kick(message, member: Member):
+    await member.kick()
+    await message.channel.send(f'{member.name} wurde gekickt.')
+
+
+@kick.error
+async def kick_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Bitte Gib einen Spieler ein")
+
+
+@client.command()
+async def userinfo(message, member: Member):
+    embed = discord.Embed(title='Userinfo von {}'.format(member.name),
+                          description='Das ist die user info für {}'.format(member.mention),
+                          color=0xFF7400)
+    embed.add_field(name='Server beigetreten', value=member.joined_at.strftime('%d/%m/%Y, %H:%M'),
+                    inline=True)
+
+    embed.add_field(name='Discord beigetreten', value=member.created_at.strftime('%d/%m/%Y, %H:%M'),
+                    inline=True)
+    rollen = ''
+    member.roles.sort(reverse=True)
+    for role in member.roles:
+        if not role.is_default():
+            rollen += '{} \r\n'.format(role.mention)
+    if rollen:
+        embed.add_field(name='Rollen', value=rollen, inline=True)
+    embed.set_thumbnail(url=member.avatar_url)
+    embed.set_footer(text='Ich bin ein EmbedFooter')
+    await message.channel.send(embed=embed)
+
+
+@client.command()
+async def clear(message, anzahl: int):
+    deleted = await message.channel.purge(limit=anzahl, check=is_not_pinned)
+    await message.channel.send('{} Nachricht/en gelöscht.'.format(len(deleted) - 1))
+
+
+@clear.error
+async def clear_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Bitte Gib eine Anzahl an")
+
+
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        embed = discord.Embed(title="Unbekannter Command",
+                              description="Der Command, den du versucht hast zu nutzen ist entweder falsch eingegeben oder existiert nicht!",
+                              color=0xff0808)
+        embed.set_thumbnail(
+            url="https://cdn.discordapp.com/attachments/597699947978162197/711184448212959272/Frage.png")
+        await ctx.send(embed=embed)
+
+
+@client.command()
+@commands.is_owner()
+async def status(ctx, *, arg):
+    await client.change_presence(activity=discord.Game(f"{arg}"), status=discord.Status.online)
+    embed = discord.Embed(title='Manuelle Status-Änderung!', description=f'\r\n'
+                                                                         f'**Neuer Status:** ``{arg}``',
+                          color=0xff0808)
+    embed.set_footer(text='Bot-Admin Command')
+    await ctx.send(embed=embed)
+
+
+@status.error
+async def status_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Bitte Gebe einen Status ein")
+
+
+@client.command()
+async def serverinfo(ctx):
+    server = ctx.guild
+    owner = ctx.guild.owner.mention
+    sn = server.name
+    members = server.member_count
+    created_at = server.created_at.strftime('%d.%m.%Y | %H:%M')
+    channel_count = len([x for x in server.channels if type(x) == discord.channel.TextChannel])
+    role_count = len(server.roles)
+    si = discord.Embed(title=f'{sn}', color=random.choice(farben))
+    si.add_field(name='Serverowner', value=owner, inline=True)
+    si.add_field(name='Erstellungsdatum', value=created_at, inline=True)
+    si.add_field(name='Member', value=members, inline=True)
+    si.add_field(name='Rollen', value=str(role_count), inline=True)
+    si.add_field(name='Channel Count', value=str(channel_count), inline=True)
+    si.add_field(name='Region', value=server.region, inline=True)
+    si.set_thumbnail(url=ctx.guild.icon_url)
+    si.set_footer(icon_url=server.icon_url, text=f'{server.name} | {server.id}')
+    await ctx.send(embed=si)
+
+
+@client.command()
+async def kopf(ctx):
+    responses = ['Deine Antwort ist: Kopf, du hast gewonnen!', 'Deine Antwort ist: Zahl, du hast Verloren']
+    await ctx.send(random.choice(responses))
+
+
+@client.command()
+async def zahl(ctx):
+    responses = ['Deine Antwort ist: Kopf, du hast Verloren', 'Deine Antwort ist: zahl, du hast gewonnen!']
+    await ctx.send(random.choice(responses))
+
+
+@client.command()
+@commands.is_owner()
+async def shutdown(ctx):
+    await ctx.send("Der Bot wird heruntergefahren")
+    exit(0)
+
+
+client.run('')
