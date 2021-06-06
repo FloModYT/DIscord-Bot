@@ -1,0 +1,18 @@
+@bot.command(name='userinfo')
+async def userinfo(ctx, member: discord.Member):
+    ch = pytz.timezone('Europe/Berlin')
+    embed = discord.Embed(title=f'Userinfo für {member.display_name}', 
+                            description='', color=0xFF3036) 
+
+
+    embed.add_field(name='Name', value=f'```{member.name}#{member.discriminator}```', inline=True)
+    embed.add_field(name='Bot', value=f'```{("Aktiv" if member.bot else "Passiv")}```', inline=True)
+    embed.add_field(name='Nickname', value=f'```{(member.nick if member.nick else "⠀")}```', inline=True)
+    embed.add_field(name='Serverbeitritt', value=f'```{member.joined_at}```', inline=True)
+    embed.add_field(name='Discordbeitritt', value=f'```{member.created_at}```', inline=True)
+    embed.add_field(name='Rollen', value=f'```{len(member.roles)}```', inline=True)
+    embed.add_field(name='Rechtebasisrolle', value=f'```{member.top_role}```', inline=True)
+    embed.add_field(name='Farbe', value=f'```{member.color}```', inline=True)
+    embed.add_field(name='Booststatus', value=f'```{("Aktiv" if member.premium_since else "Passiv")}```', inline=True)
+    embed.set_footer(text=f'Angefordert von @{ctx.author.name}#{ctx.author.discriminator}')
+    await ctx.send(embed=embed)
